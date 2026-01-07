@@ -14,13 +14,14 @@ enum class TokenKind {
     //Literals
 	NUMBER, STRING,
 	DATA_TYPE,
-	//Punctuation
+	//Punctuation and Operators
 	LEFT_PAREN, RIGHT_PAREN, COMMA, SEMI_COLON, ASTERISK,
+    EQUAL, LESS_THAN, GREATER_THAN,
     END_OF_FILE,
 };
 
 std::vector <std::string> keywordList = {
-    "SELECT", "FROM", "INSERT", "INTO", "VALUES",
+    "SELECT", "FROM", "INSERT", "INTO", "VALUES", "WHERE",
     "SET", "DELETE", "DROP",
 	"CREATE", "COLUMN", "DATABASE", "TABLE", "USE",
     "TRUE", "FALSE"
@@ -69,14 +70,17 @@ public:
         if (m_reachedEOF) {
             return Token{ TokenKind::END_OF_FILE, ""};
         }
+
         size_t token_start = m_index - 1;
         if (isalpha(static_cast<unsigned char>(c))) {
             std::string lexeme;
+
             do {
                 lexeme += c;
                 c = next();
-            } while (isalnum(static_cast<unsigned char>(c)));
-
+            } 
+            while (isalnum(static_cast<unsigned char>(c)));
+            
             m_index--;
             auto it = std::find(keywordList.begin(), keywordList.end(), lexeme);
             if (it != keywordList.end()) {
@@ -89,9 +93,11 @@ public:
 
             return Token{ TokenKind::IDENTIFIER, lexeme};
         }
+
         else if ( isdigit(static_cast<unsigned char>(c)) ) {
             std::string lexeme;
             bool has_dot = false;
+
             do {
                 if (c == '.') {
                     if (has_dot) {
@@ -101,10 +107,13 @@ public:
                 }
                 lexeme += c;
                 c = next();
-            } while (isdigit(static_cast<unsigned char>(c)) || c == '.');
+            } 
+            while (isdigit(static_cast<unsigned char>(c)) || c == '.');
+            
             m_index--;
             return Token{ TokenKind::NUMBER, lexeme};
         }
+
         else {
             switch (c) {
             case '*':
@@ -117,6 +126,12 @@ public:
                 return Token{ TokenKind::COMMA, ","};
             case ';':
                 return Token{ TokenKind::SEMI_COLON, ";"};
+            case '=':
+                return Token{ TokenKind::EQUAL, "="};
+            case '<':
+                return Token{ TokenKind::LESS_THAN, "<"};
+            case '>':
+                return Token{ TokenKind::GREATER_THAN, ">"};
             case '"': {
                 std::string lexeme;
                 char ch = next();

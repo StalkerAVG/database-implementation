@@ -13,21 +13,39 @@ enum class DataType {
 	ID,
 };
 
-class Expression {
+class AST{
+public:
+	virtual ~AST() = default;
+};
+
+class Expression : public AST {
 public:
 	virtual ~Expression() = default;
 };
 
-// Requires C++17 or higher for std::variant
-using LiteralValue = std::variant<int, float, std::string, bool>;
+class ColumnReference : public Expression {
+public:
+    std::string columnName;
+	ColumnReference(const std::string& name) : columnName(name) {}
+};
 
 class Literal : public Expression {
 public:
-	LiteralValue value;
-	Literal(const LiteralValue val) : value(val) {}
+	std::string value;
+	Literal(const std::string& val) : value(val) {}
 };
 
-class Statement {
+class BinaryExpression : public Expression {
+public:
+	std::shared_ptr<Expression> left;
+	std::shared_ptr<Expression> right;
+	std::string op;
+
+	BinaryExpression(std::shared_ptr<Expression> l, std::shared_ptr<Expression> r, const std::string& oper)
+		: left(l), right(r), op(oper) {}
+};
+
+class Statement : public AST {
 public:
 	virtual ~Statement() = default;
 };
@@ -44,19 +62,6 @@ public:
 
 class UseDatabaseStatement : public Statement {
 public:
-	std::string databaseName;
-};
-
-class CreateColumnStatement : public Statement {
-public:
-	std::string columnName;
-	DataType columnType;
-	std::string databaseName;
-};
-
-class DropColumnStatement : public Statement {
-public:
-	std::string columnName;
 	std::string databaseName;
 };
 
@@ -78,6 +83,7 @@ public:
 	std::vector<std::unique_ptr<Expression>> columns;
 	std::string tableName;
 	std::string databaseName; 
+	std::shared_ptr<Expression> whereClause;
 };
 
 class InsertStatement : public Statement {
@@ -91,4 +97,5 @@ class DeleteStatement : public Statement {
 public:
 	std::string tableName;
 	std::string databaseName;
+	std::shared_ptr<Expression> whereClause;
 };
