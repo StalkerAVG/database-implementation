@@ -5,6 +5,7 @@
 #include <string>
 #include "db_table.hpp"
 #include "metadata_manager.hpp"
+#include "../indexing/b_tree.hpp"
 
 namespace fs = std::filesystem;
 
@@ -12,6 +13,7 @@ class StorageEngine{
     protected:
         std::string _main_directory = "cholopDB";
         std::string _meta_file = "metadata.meta";
+        BTree _index;
 
     public:
         void create_db(std::string db_name){
@@ -51,6 +53,8 @@ class StorageEngine{
         
             MetadataManager meta_mgr(meta_path);
             meta_mgr.add_table_entry(validate_table);
+
+            _index.create_index_file(db_name, table_name);
 		}
         
         void drop_table(std::string db_name, std::string table_name){

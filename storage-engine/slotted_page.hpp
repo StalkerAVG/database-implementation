@@ -208,10 +208,4 @@ class SlottedPage : public Page {
             }
             return buffer;
         }
-         
-        void create_page() {}
-
-        void page_availability() {
-
-        }
 };
