@@ -4,6 +4,8 @@
 #include <vector>
 #include <variant>
 
+namespace amk {
+
 enum class DataType {
 	SMALLINT,
 	BIGINT,
@@ -99,3 +101,5 @@ public:
 	std::string databaseName;
 	std::shared_ptr<Expression> whereClause;
 };
+
+}

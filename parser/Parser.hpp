@@ -5,6 +5,8 @@
 #include <vector>
 #include <stdexcept>
 
+namespace amk {
+
 class Parser {
 private:
 	Lexer& m_lexer;
@@ -16,6 +18,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseCreateDatabaseStatement() {
+		/** @brief Parse a CREATE DATABASE statement
+		  * @return Unique pointer to the parsed CreateDatabaseStatement 
+		*/
 		
 		auto stmt = std::make_unique<CreateDatabaseStatement>();
 		advance();
@@ -31,6 +36,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseDropDatabaseStatement() {
+		/** @brief Parse a DROP DATABASE statement
+		  * @return Unique pointer to the parsed DropDatabaseStatement 
+		*/
 		
 		auto stmt = std::make_unique<DropDatabaseStatement>();
 		advance();
@@ -46,6 +54,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseUseDatabaseStatement() {
+		/** @brief Parse a USE DATABASE statement
+		  * @return Unique pointer to the parsed UseDatabaseStatement 
+		*/
 		
 		auto stmt = std::make_unique<UseDatabaseStatement>();
 		advance();
@@ -61,6 +72,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseCreateTableStatement() {
+		/** @brief Parse a CREATE TABLE statement
+		  * @return Unique pointer to the parsed CreateTableStatement 
+		*/
 		
 		auto stmt = std::make_unique<CreateTableStatement>();
 		advance();
@@ -113,6 +127,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseDropTableStatement() {
+		/** @brief Parse a DROP TABLE statement
+		  * @return Unique pointer to the parsed DropTableStatement 
+		*/
 		
 		auto stmt = std::make_unique<DropTableStatement>();
 		advance();
@@ -127,6 +144,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseSelectStatement() {
+		/** @brief Parse a SELECT statement
+		  * @return Unique pointer to the parsed SelectStatement 
+		*/
 		
 		auto stmt = std::make_unique<SelectStatement>();
 		advance();
@@ -159,6 +179,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseInsertStatement() {
+		/** @brief Parse an INSERT statement
+		  * @return Unique pointer to the parsed InsertStatement 
+		*/
 		
 		auto stmt = std::make_unique<InsertStatement>();
 		advance();
@@ -218,6 +241,9 @@ private:
 	}
 
 	std::unique_ptr<Statement> parseDeleteStatement() {
+		/** @brief Parse a DELETE statement
+		  * @return Unique pointer to the parsed DeleteStatement 
+		*/
 		
 		auto stmt = std::make_unique<DeleteStatement>();
 		advance();
@@ -244,6 +270,9 @@ private:
 	}
 
 	std::shared_ptr<Expression> parseColumnReference() {
+		/** @brief Parse a column reference expression
+		  * @return Shared pointer to the parsed ColumnReference 
+		*/
 		
 		if (m_currentToken.type != TokenKind::IDENTIFIER) {
 			throw std::logic_error("Expected column reference");
@@ -255,6 +284,9 @@ private:
 	}
 
 	std::unique_ptr<Expression> parseLiteralExpression() {
+		/** @brief Parse a literal expression
+		  * @return Unique pointer to the parsed Literal 
+		*/
 		
 		if (m_currentToken.type == TokenKind::NUMBER) {
 			
@@ -282,6 +314,9 @@ private:
 	}
 
 	std::shared_ptr<Expression> parseBinaryExpression() {
+		/** @brief Parse a binary expression
+		  * @return Shared pointer to the parsed BinaryExpression 
+		*/
 		
 		auto left = parseColumnReference();
 
@@ -295,15 +330,31 @@ private:
 		std::string op = m_currentToken.lexeme;
 		advance();
 		auto right = parseLiteralExpression();
+		//pointers issues
+		//move() is required for unique_ptr
 		return std::make_shared<BinaryExpression>(std::move(left), std::move(right), op);
 	}
 
 public:
+	/** @brief Constructor for the Parser class
+	  * @param lexer Reference to the Lexer instance
+	*/
 	Parser(Lexer& lexer) : m_lexer(lexer) {
 		advance();
 	}
 
+	/** @brief Constructor for the Parser class with previous token
+	  * @param lexer Reference to the Lexer instance
+	  * @param token Reference to the previous Token
+	*/
+	Parser(Lexer& lexer, Token& token) : m_lexer(lexer), m_previousToken(token) {
+		advance();
+	}
+
 	std::unique_ptr<Statement> parseStatement() {
+		/** @brief Parse a SQL statement
+		  * @return Unique pointer to the parsed Statement 
+		*/
 
 		if (m_currentToken.type == TokenKind::KEYWORD) {
 
@@ -361,6 +412,10 @@ public:
 	}
 
 	DataType stringToDataType(const std::string& input) {
+		/** @brief Convert a string representation of a data type to its enum value
+		  * @param input String representation of the data type
+		  * @return Corresponding DataType enum value
+		*/
 		
 		auto it = stringToDataTypeMap.find(input);
 		if (it != stringToDataTypeMap.end()) {
@@ -370,3 +425,5 @@ public:
 		throw std::runtime_error("Unknown DataType: " + input);
 	}
 };
+
+}

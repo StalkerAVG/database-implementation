@@ -8,30 +8,49 @@
 #include <iostream>
 #include <variant>
 
-inline ColumnType astToStorageType(DataType astType) {
+namespace fs = std::filesystem;
+
+inline ak::ColumnType astToStorageType(amk::DataType astType) {
+    /**
+     * @brief Convert AST DataType to StorageEngine ColumnType 
+     * @param astType AST DataType
+     * @return Corresponding StorageEngine ColumnType
+     */
     switch (astType) {
-    case DataType::SMALLINT: return SMALLINT;
-    case DataType::BIGINT: return BIGINT;
-    case DataType::FLOAT: return FLOAT;
-    case DataType::SMALLTEXT: return SMALLTEXT;
-    case DataType::BIGTEXT: return BIGTEXT;
-    case DataType::ID: return ID;
+    case amk::DataType::SMALLINT: return ak::SMALLINT;
+    case amk::DataType::BIGINT: return ak::BIGINT;
+    case amk::DataType::FLOAT: return ak::FLOAT;
+    case amk::DataType::SMALLTEXT: return ak::SMALLTEXT;
+    case amk::DataType::BIGTEXT: return ak::BIGTEXT;
+    case amk::DataType::ID: return ak::ID;
     default: throw std::runtime_error("Unknown data type");
     }
 }
 
-inline std::string extractLiteralValue(Expression* expr) {
-    if (auto lit = dynamic_cast<Literal*>(expr)) {
+inline std::string extractLiteralValue(amk::Expression* expr) {
+    /**
+     * @brief Extract string value from Literal expression
+     * @param expr Expression pointer
+     * @return String value of the literal
+     */
+    if (auto lit = dynamic_cast<amk::Literal*>(expr)) {
         return lit->value;
     }
     throw std::runtime_error("Expected literal expression");
 }
 
+namespace amk {
+
 class Executor {
 private:
-    StorageEngine strgeng;
-    TableManager tblmgr;
+    ak::StorageEngine strgeng;
+    ak::TableManager tblmgr;
     std::string m_currentDatabase;
+
+    struct ColumnInfo {
+    bool exists;
+    bool hasIndex;
+    };
 
     void ensureDatabaseSelected() {
         if (m_currentDatabase.empty()) {
@@ -39,19 +58,81 @@ private:
         }
 	}
 
-    
+    ColumnInfo checkColumnIndex(const std::string& dbName, 
+                                const std::string& tableName, 
+                                const std::string& columnName) {
+        /** @brief Check if a column exists and has an index
+          * @param dbName Database name
+          * @param tableName Table name
+          * @param columnName Column name
+          * @return ColumnInfo struct with existence and index info
+        */
+        ColumnInfo result = {false, false};
+
+        std::string filePath = strgeng.get_main_directory() + "/" + dbName + "/" + strgeng.get_meta_file();
+
+        std::ifstream file(filePath);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open metadata file: " + filePath);
+        }
+        
+        std::string line;
+        bool foundTable = false;
+        int columnsToRead = 0;
+        int linesSkipped = 0;
+        
+        while (std::getline(file, line)) {
+            if (!foundTable) {
+                if (line == tableName) {
+                    foundTable = true;
+                    linesSkipped = 0;
+                }
+            } else {
+                linesSkipped++;
+                
+                if (linesSkipped == 2) {
+                    columnsToRead = std::stoi(line);
+                } else if (linesSkipped > 2 && columnsToRead > 0) {
+                    std::stringstream ss(line);
+                    std::string colName, indexFlag;
+                    
+                    if (std::getline(ss, colName, ',') && std::getline(ss, indexFlag, ',')) {
+                        if (colName == columnName) {
+                            result.exists = true;
+                            result.hasIndex = (indexFlag == "1");
+                            file.close();
+                            return result;
+                        }
+                    }
+                    
+                    columnsToRead--;
+
+                    if (columnsToRead == 0) {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        file.close();
+        return result;
+    }
+
 
 public:
     Executor() = default;
 
     void executeStatement(Statement* stmt) {
+        /** @brief Execute a given SQL statement
+         *  @param stmt Pointer to the statement to execute
+         */
 
         if (auto createDb = dynamic_cast<CreateDatabaseStatement*>(stmt)) {
             strgeng.create_db(createDb->databaseName);
         }
 
         else if (auto dropDb = dynamic_cast<DropDatabaseStatement*>(stmt)) {
-			throw std::logic_error("Drop database not implemented yet.");
+            strgeng.drop_db(dropDb->databaseName);
         }
 
         else if (auto useDb = dynamic_cast<UseDatabaseStatement*>(stmt)) {
@@ -61,10 +142,10 @@ public:
         else if (auto createTable = dynamic_cast<CreateTableStatement*>(stmt)) {
             ensureDatabaseSelected();
 
-            std::vector<Column> columns;
+            std::vector<ak::Column> columns;
             for (const auto& [colName, colType] : createTable->columnNamesWithTypes) {
-                ColumnType storageType = astToStorageType(colType);
-                bool isUnique = (storageType == ID);
+                ak::ColumnType storageType = astToStorageType(colType);
+                bool isUnique = (storageType == ak::ID);
                 columns.emplace_back(colName, storageType, isUnique);
             }
 
@@ -105,7 +186,11 @@ public:
             auto rightLit  = dynamic_cast<Literal*>(binaryExpr->right.get());
             
             if(binaryExpr->op == "=" && leftColRef && rightLit) {
-                Record record = tblmgr.retrieve_record(m_currentDatabase, selectStmt->tableName, std::stoi(rightLit->value));
+                if(!checkColumnIndex(m_currentDatabase, selectStmt->tableName, leftColRef->columnName).exists || 
+                   !checkColumnIndex(m_currentDatabase, selectStmt->tableName, leftColRef->columnName).hasIndex) {
+                    throw std::runtime_error("This is not an index column.");
+                }
+                ak::Record record = tblmgr.retrieve_record(m_currentDatabase, selectStmt->tableName, std::stoi(rightLit->value));
                 std::cout << record << std::endl;
             }
 
@@ -146,3 +231,5 @@ public:
         }
 	}
 };
+
+}

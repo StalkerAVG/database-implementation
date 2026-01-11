@@ -105,6 +105,14 @@ class StorageEngine{
             }
         }
 
+        std::string get_main_directory() const { // I need this for Executor
+            return _main_directory;
+        }
+        
+        std::string get_meta_file() const { // I need this for Executor
+            return _meta_file;
+        }
+
 };
 
 }

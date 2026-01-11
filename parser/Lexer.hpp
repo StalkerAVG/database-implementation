@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include "AST.hpp"
 
+namespace amk {
+
 enum class TokenKind {
 	KEYWORD,
     IDENTIFIER,
@@ -58,9 +60,21 @@ private:
 
     }
 public:
+    /** @brief Constructor for the Lexer class
+      * @param input Input SQL string
+      * @param index Starting index (default is 0)
+    */
+    Lexer(const std::string& input, const int index) : m_input(input), m_index(index) {}
+    
+    /** @brief Constructor for the Lexer class
+      * @param input Input SQL string
+    */
     Lexer(const std::string& input) : m_input(input), m_index(0) {}
 
     Token getNextToken() {
+        /** @brief Get the next token from the input stream
+          * @return The next Token 
+        */
         
         char c = next();
 		while ( isspace(static_cast<unsigned char>(c)) ) {
@@ -152,3 +166,5 @@ public:
         }
     }
 };
+
+}
