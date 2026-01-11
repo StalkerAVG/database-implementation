@@ -8,9 +8,9 @@ int main(){
     // ak::StorageEngine obj;
     // obj.create_db("test3"); // Example of DB creation
 
-	// aColumn col1("col1", ID, true);
-	// Column col2("col2", SMALLTEXT); // Example of column creation with different constructors
-	
+	// ak::Column col1("col1", ak::ID, true);
+	// ak::Column col2("col2", ak::SMALLTEXT); // Example of column creation with different constructors
+
 	// obj.create_table("test3", "table1", {col1, col2}); // Example of creation
 	// obj.drop_table("test", "table3"); // Example of deletion
 	

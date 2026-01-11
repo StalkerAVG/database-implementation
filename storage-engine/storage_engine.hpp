@@ -25,7 +25,7 @@ class StorageEngine{
          * @brief Default constructor
          */
         StorageEngine() 
-            : _main_directory("cholopDB"), _meta_file("metadata.meta"), _index() {}
+            : _main_directory("cholopDB"), _meta_file("metadata.meta"), _index("cholopDB") {}
 
         /**
          * @brief Constructor with main directory
