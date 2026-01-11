@@ -7,6 +7,11 @@
 
 namespace fs = std::filesystem;
 
+namespace ak {
+
+/**
+* @brief Types of data DB can work with
+*/
 enum ColumnType {
     BIGTEXT = 0,
     ID = 1,
@@ -16,11 +21,15 @@ enum ColumnType {
     FLOAT = 5
 };
 
+/**
+* @brief Class for storing columns in memory
+*/
 class Column{
     private:
-        std::string _name;
-        ColumnType _type;
-        bool _id_field;
+        std::string _name;      ///< Name of the column
+        ColumnType _type;       ///< Type of data
+        bool _id_field;         ///< Is it Index/indentifier field
+        int _size;              ///< Size of the column
         inline static const std::map<ColumnType, int> _size_dict = {
             {BIGTEXT, 1024},
             {ID, 4},
@@ -29,46 +38,64 @@ class Column{
             {SMALLINT, 2},
             {FLOAT, 4},
         };
-        int _size;
 
     public:
+        /**
+        * @brief Default constructor
+        */
+        Column() : _name(""), _type(ID), _id_field(false), _size(4) {}
+    
+        /**
+        * @brief Parametrized constructor
+        * @param name Column name
+        * @param type Data type
+        * @param id_field Is it index/indentifier field
+        */
         Column(std::string name, enum ColumnType type, bool id_field): _name(name), _type(type), _id_field(id_field){
             // Validation
             if(name.empty()) throw std::invalid_argument("Cannot create column with empty name");
-            
             _size = sizeis();
-
             std::cout << "Column called " << name << " created succesfully.\n";
         }
-		
+
+        /**
+        * @brief Constructor withou id field boolean
+        * @param name Column name
+        * @param type Data type
+        */
 		Column(std::string name, enum ColumnType type): Column(name, type, false){}
 
-        bool is_unique() const{
-            return _id_field;
-        }
+        bool is_unique() const{return _id_field;}
 
-        int sizeis() const{
-            return _size_dict.at(_type);
-        }
+        int sizeis() const{return _size_dict.at(_type);}
 
         std::string getColumnConfig() const{
             return _name+","+std::to_string(_type)+","+std::to_string(sizeis());
         }
 
-        ColumnType getColumnType() const{
-            return _type;
-        }
+        ColumnType getColumnType() const{return _type;}
 };
 
-
+/**
+* @brief Class for storing and manipilating Table structure in memory
+*/
 class Table{
     private:
-        std::string _name;
-        std::vector<Column> _columns;
+        std::string _name; ///< Table name
+        std::vector<Column> _columns; ///< Table columns
 
     public:
+        /**
+        * @brief Default constructor
+        */
+        Table() : _name("") {}
+        
+        /**
+        * @brief Full constructor with validation
+        * @param name Table name
+        * @param columns array of columns
+        */
         Table(std::string name, std::vector<Column>& columns): _name(name), _columns(columns){
-            // Validation here
             int id_field_count = 0;
             int size_of_columns = 0;
 
@@ -77,7 +104,6 @@ class Table{
                     id_field_count++;
                     if(col.getColumnType() == SMALLINT) throw std::invalid_argument("SMALLINT cannot be index field");
                 }
-
                 size_of_columns += col.sizeis();
             }
 
@@ -89,17 +115,16 @@ class Table{
 
             std::cout<<id_field_count;
             if(id_field_count != 1){
-             throw id_field_count < 1 ? std::invalid_argument("At least one column must be identification type of column") : std::invalid_argument("Cannot create more than one column of type identification");
+             throw id_field_count < 1 ? std::invalid_argument("At least one column must be identification type of column")
+                                      : std::invalid_argument("Cannot create more than one column of type identification");
             }
 
             if(name.empty()) throw std::invalid_argument("Name of the table cannot be empty");
         }
 
-        std::string getName() const {
-            return _name;
-        }
+        std::string getName() const {return _name;}
 
-        std::vector<Column> getColumns() const {
-            return _columns;
-        }
+        std::vector<Column> getColumns() const {return _columns;}
 };
+
+}

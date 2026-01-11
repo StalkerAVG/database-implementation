@@ -13,27 +13,49 @@
 
 namespace fs = std::filesystem;
 
+namespace ak {
+
+/**
+ * @brief Class for managing CRUD operations inside tables
+ */
 class TableManager : protected StorageEngine{
     private:
-        BTree index;
+        BTree index; ///< Index algorithm B-Tree
 
-        static void debug_hex(const std::vector<uint8_t>& data, std::string label) {
-            std::cout << "--- " << label << " (" << data.size() << " bytes) ---\n";
-            for (size_t i = 0; i < data.size(); i++) {
-                std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)data[i] << " ";
-                if ((i + 1) % 16 == 0) std::cout << "\n";
+        int _extract_id_from_record(std::vector<uint8_t>& record_data, 
+                std::vector<std::string>& conf_vector, int id_column_index) {
+
+            int offset = 0;
+            for (int i = 0; i < id_column_index; i++) {
+                std::stringstream ss(conf_vector[i + 2]);
+                std::string segment;
+                std::vector<std::string> parts;
+                while(std::getline(ss, segment, ',')) {
+                    parts.push_back(segment);
+                }
+                int col_size = std::stoi(parts[2]);
+                offset += col_size;
             }
-            std::cout << std::dec << "\n\n";
+            
+            std::stringstream ss(conf_vector[id_column_index + 2]);
+            std::string segment;
+            std::vector<std::string> parts;
+            while(std::getline(ss, segment, ',')) {
+                parts.push_back(segment);
+            }
+            
+            int col_type = std::stoi(parts[1]);
+            int col_size = std::stoi(parts[2]);
+            
+            if (col_type != ID) {
+                throw std::runtime_error("Expected ID column type, got: " + std::to_string(col_type));
+            }
+            
+            int id_value;
+            std::memcpy(&id_value, &record_data[offset], col_size);
+            return id_value;
         }
 
-        static void debug_bits(const std::vector<uint8_t>& data) {
-            std::cout << "--- BIT VIEW ---\n";
-            for (auto byte : data) {
-                std::cout << std::bitset<8>(byte) << " ";
-            }
-            std::cout << "\n\n";
-        }
-    
         int _find_id_column_index(std::vector<std::string>& conf_vector) {
             int number_of_columns = std::stoi(conf_vector[1]);
             
@@ -55,6 +77,32 @@ class TableManager : protected StorageEngine{
         }
 
     public:
+        /**
+         * @brief Default constructor
+         */
+        TableManager() : StorageEngine(), index("cholopDB") {}
+        
+        /**
+         * @brief Constructor with main directory
+         * @param main_directory Main directory
+         */
+        TableManager(std::string main_directory) 
+            : StorageEngine(main_directory), index(main_directory) {}
+        
+        /**
+         * @brief Full constuctor
+         * @param main_directory Main directory
+         * @param meta_file Metadata file name
+         */
+        TableManager(std::string main_directory, std::string meta_file) 
+            : StorageEngine(main_directory, meta_file), index(main_directory) {}
+        
+        /**
+         * @brief Add records to the table and index
+         * @param db_name DB name
+         * @param table_name table name
+         * @param values Values to insert
+         */
         void add_record(std::string db_name, std::string table_name, std::vector<std::string> values){
             std::string metadata_path = _main_directory+"/"+db_name+"/"+_meta_file;
             std::string table_path = _main_directory + "/" + db_name + "/" + table_name;
@@ -116,25 +164,9 @@ class TableManager : protected StorageEngine{
 
             SlottedPage page(table_path, header);
             std::vector<uint8_t> data_blob = page.serialize_row(values, conf_vector);
-            std::vector<uint8_t> header_conf_test = header.getHeaderConfig();
-            
-            // Create a temporary vector for just the bitmap part (bytes 16 to end)
-            if (header_conf_test.size() > 16) {
-                std::vector<uint8_t> bitmap_only(header_conf_test.begin() + 16, header_conf_test.end());
-                debug_bits(bitmap_only);
-            }
 
             header.modify_bitmap(row_index, 0);
             std::vector<uint8_t> header_conf = header.getHeaderConfig();
-            
-            debug_hex(header_conf, "Header Config"); // Check if ID/Sizes are correct
-            debug_hex(data_blob, "Row Data");        // Check if Text/Ints are packed right
-
-            // Create a temporary vector for just the bitmap part (bytes 16 to end)
-            if (header_conf.size() > 16) {
-                std::vector<uint8_t> bitmap_only(header_conf.begin() + 16, header_conf.end());
-                debug_bits(bitmap_only);
-            }
 
             long long file_offset = (page_id * 4096) + header.getHeaderSize() + (row_index * header.getCellSize());
 
@@ -152,6 +184,12 @@ class TableManager : protected StorageEngine{
             index.insert(key, page_id, row_index, db_name, table_name); 
         }
 
+        /**
+         * @brief Delete records from the table
+         * @param db_name DB name
+         * @param table_name Table name
+         * @param key identificator of the data record to remove
+         */
         void delete_record(std::string db_name, std::string table_name, int key){
             std::string metadata_path = _main_directory + "/" + db_name + "/" + _meta_file;
             std::string table_path = _main_directory + "/" + db_name + "/" + table_name;
@@ -202,6 +240,13 @@ class TableManager : protected StorageEngine{
             std::cout << "Record with key " << key << " deleted successfully.\n";
         }
 
+        /**
+         * @brief Retrieve record from the table
+         * @param db_name DB name
+         * @param table_name Table name
+         * @param key Record identifier
+         * @return Found record in Record structure
+         */
         Record retrieve_record(std::string db_name, std::string table_name, int key) {
             std::string metadata_path = _main_directory + "/" + db_name + "/" + _meta_file;
             std::string table_path = _main_directory + "/" + db_name + "/" + table_name;
@@ -233,6 +278,13 @@ class TableManager : protected StorageEngine{
             file.seekg(cell_offset, std::ios::beg);
             file.read(reinterpret_cast<char*>(record_data.data()), cell_size);
             file.close();
+
+            int id_column_index = _find_id_column_index(conf_vector);
+            int actual_id = _extract_id_from_record(record_data, conf_vector, id_column_index);
+            
+            if (actual_id != key) {
+                throw std::runtime_error("Record with key " + std::to_string(key) + " not found (was deleted)");
+            }
             
             Record record;
             record.data = record_data;
@@ -241,3 +293,5 @@ class TableManager : protected StorageEngine{
             return record;
         }
 };
+
+}

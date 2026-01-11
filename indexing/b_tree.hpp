@@ -8,6 +8,8 @@
 
 namespace fs = std::filesystem;
 
+namespace ak{
+
 struct IndexEntry {
     int key;    // 4 bytes
     int value;  // 4 bytes Packed location (page << 16 | slot)
@@ -36,12 +38,15 @@ struct SplitResult {
     int new_right_page_id;
 };
 
+/**
+ * @brief Class that implements B tree algorithm for indexization
+ */
 class BTree{
     private:
-        std::string _main_directory = "cholopDB";
-        int _node_size; // 4096-20 size of header, we can then store up to 339  records per leaf
-        int _max_entries;
-        int _file_header_size = 4;
+        std::string _main_directory; ///< Main directory name (must be the same as storage engine with which is used)
+        int _node_size; ///< size of header
+        int _max_entries; ///< Max number of entries per node/pgae
+        int _file_header_size = 4; ///< File header size
         
         int _get_max_page_id(std::fstream& index_file) {
             index_file.seekg(0, std::ios::beg);
@@ -325,8 +330,30 @@ class BTree{
 
 
     public:
+        /**
+         * @brief Default constructor
+         */
         BTree() {
             _max_entries = (4096-sizeof(BTreePageHeader)) / sizeof(IndexEntry);
+            _node_size = sizeof(IndexEntry);
+        }
+        
+        /**
+         * @brief Constructor with main directory
+         * @param main_directory Main directory
+         */
+        BTree(std::string main_directory) : _main_directory(main_directory) {
+            _max_entries = (4096 - sizeof(BTreePageHeader)) / sizeof(IndexEntry);
+            _node_size = sizeof(IndexEntry);
+        }
+
+        /**
+         * @brief Constructor with main directory name and max entries
+         * @param main_directory Main direcory
+         * @param max_entries Max entries count
+         */
+        BTree(std::string main_directory, int max_entries) 
+            : _main_directory(main_directory), _max_entries(max_entries) {
             _node_size = sizeof(IndexEntry);
         }
 
@@ -445,3 +472,5 @@ class BTree{
             index_file.close();
         }
 };
+
+}

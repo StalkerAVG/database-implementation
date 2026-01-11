@@ -7,9 +7,14 @@
 
 namespace fs = std::filesystem;
 
+namespace ak {
+
+/**
+ * @brief Class for managing tables metadata
+ */
 class MetadataManager{
     private:
-        std::string _base_path;
+        std::string _base_path; ///< Path to the metadata file
 
         void _clean_string(std::string& s) {
             if (!s.empty() && s.back() == '\r') {
@@ -18,6 +23,15 @@ class MetadataManager{
         }
 
     public:
+        /**
+         * @brief Deafult constructor
+         */
+        MetadataManager() : _base_path("") {}
+        
+        /**
+         * @brief Constructor with a path
+         * @param path Path to a metadata file
+         */
         MetadataManager(std::string path) : _base_path(path) {}
         
         void add_table_entry(Table& table_to_add){
@@ -137,3 +151,5 @@ class MetadataManager{
             return conf_vector;
         }
 };
+
+}

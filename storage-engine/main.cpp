@@ -5,21 +5,21 @@
 #include "record.hpp"
 
 int main(){
-    // StorageEngine obj;
-    // obj.create_db("test3");
+    // ak::StorageEngine obj;
+    // obj.create_db("test3"); // Example of DB creation
 
-	// Column col1("col1", ID, true);
-	// Column col2("col2", SMALLTEXT);
+	// aColumn col1("col1", ID, true);
+	// Column col2("col2", SMALLTEXT); // Example of column creation with different constructors
 	
-	// obj.create_table("test3", "table1", {col1, col2}); 
-	// // obj.drop_table("test", "table3");
+	// obj.create_table("test3", "table1", {col1, col2}); // Example of creation
+	// obj.drop_table("test", "table3"); // Example of deletion
 	
-	TableManager tblmgr;
+	ak::TableManager tblmgr;
 
-	// tblmgr.add_record("test3", "table1", {"4", "Its me Mario"});
-	Record record = tblmgr.retrieve_record("test3", "table1", 1);
-	std::cout << record << std::endl; 
-	tblmgr.delete_record("test3", "table1", 1);
-	Record record2 = tblmgr.retrieve_record("test3", "table1", 1);
+	// tblmgr.add_record("test3", "table1", {"5", "Its me Mario"}); // Example of record insertion
+	ak::Record record = tblmgr.retrieve_record("test3", "table1", 5);
+	std::cout << record << std::endl; // Example or printig out record
+	// tblmgr.delete_record("test3", "table1", 1); // Example of record deletion
+	ak::Record record2 = tblmgr.retrieve_record("test3", "table1", 4);
 	std::cout << record2 << std::endl; 
 }

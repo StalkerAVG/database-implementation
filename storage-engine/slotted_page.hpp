@@ -7,19 +7,33 @@
 #include <cstdint>
 #include <cstring>
 
+namespace ak {
+
+/**
+* @brief Slotted Page header with cell usage bitmap to track place availability
+*/
 class SlottedPageHeader : public PageHeader {
     private:
-        int _cell_size;
-        uint8_t _usage_bitmap[128];
-        bool _have_free_space = 1;
-        int _row_count = 0;
+        int _cell_size; ///< Cell size
+        uint8_t _usage_bitmap[128]; ///< Cell availability bitmap
+        bool _have_free_space = 1; ///< Is there any free cell
+        int _row_count = 0; ///< Amount of records
 
     public:
+        /**
+         * @brief Constructor with page id and cell size
+         * @param id Id of the page
+         * @param cell_size Cell size
+         */
         SlottedPageHeader(int id, int cell_size): PageHeader(id), _cell_size(cell_size), _row_count(0) 
         {
             std::memset(_usage_bitmap, 0, 128);
         }
         
+        /**
+        * @brief Constructor with buffer with all the data for deserialization
+        * @param buffer Buffer wth data
+        */
         SlottedPageHeader(const std::vector<uint8_t>& buffer) : PageHeader(0) {
             if (buffer.size() != _size) {
                 throw std::runtime_error("Invalid header buffer size");
@@ -34,6 +48,9 @@ class SlottedPageHeader : public PageHeader {
             std::memcpy(_usage_bitmap, &buffer[16], 128);
         }
 
+        /**
+        * @brief Default constructor
+        */
         SlottedPageHeader() {}
 
         int check_for_free_space() {
@@ -115,10 +132,12 @@ class SlottedPageHeader : public PageHeader {
         }
 };
 
-
+/**
+ * @brief Slotted Page for more efficient records storing
+ */
 class SlottedPage : public Page {
     private:
-        SlottedPageHeader _header;
+        SlottedPageHeader _header; ///< Page Header
 
         float _strict_stof(const std::string& str) {
             size_t pos = 0;
@@ -137,6 +156,16 @@ class SlottedPage : public Page {
         }
 
     public:
+        /**
+         * @brief Deafult constructor
+         */
+        SlottedPage() : Page(), _header() {}
+
+        /**
+         * @brief Constructor with a path to the table, and the page header
+         * @param table_path Path to the table
+         * @param header Page header created by SlottedPageHeader class
+         */
         SlottedPage(std::string table_path, SlottedPageHeader& header): Page(table_path), _header(header) {}
         
         std::vector<uint8_t> serialize_row(
@@ -209,3 +238,5 @@ class SlottedPage : public Page {
             return buffer;
         }
 };
+
+}

@@ -9,13 +9,39 @@
 
 namespace fs = std::filesystem;
 
+namespace ak {
+
+/**
+ * @brief Actual engine to store and data storage
+ */
 class StorageEngine{
     protected:
-        std::string _main_directory = "cholopDB";
-        std::string _meta_file = "metadata.meta";
-        BTree _index;
+        std::string _main_directory; ///< Main directory
+        std::string _meta_file; ///< Metadata file name
+        BTree _index; ///< Index algorithm
 
     public:
+        /**
+         * @brief Default constructor
+         */
+        StorageEngine() 
+            : _main_directory("cholopDB"), _meta_file("metadata.meta"), _index() {}
+
+        /**
+         * @brief Constructor with main directory
+         * @param main_directory Main directory name
+         */
+        StorageEngine(std::string main_directory) 
+            : _main_directory(main_directory), _meta_file("metadata.meta"), _index(main_directory) {}
+
+        /**
+         * @brief Full constructor
+         * @param main_directory Main directory name
+         * @param meta_file Metadata file name
+         */
+        StorageEngine(std::string main_directory, std::string meta_file) 
+            : _main_directory(main_directory), _meta_file(meta_file), _index(main_directory) {}
+
         void create_db(std::string db_name){
             if (!fs::exists(_main_directory)) fs::create_directory(_main_directory);
             
@@ -80,3 +106,5 @@ class StorageEngine{
         }
 
 };
+
+}

@@ -4,11 +4,30 @@
 #include <string>
 #include <bits/stdc++.h>
 
-// Tbh this was just to overload operators (*^_^*)
+namespace ak {
+/**
+ * @brief Structure for database records representation
+ */
 struct Record {
-    std::vector<uint8_t> data;
-    std::vector<std::string> conf_vector;
+    std::vector<uint8_t> data; ///< Raw record data
+    std::vector<std::string> conf_vector; ///< Column configuration from metadata file
     
+    /**
+     * @brief Default constructor
+     */
+    Record() = default;
+    
+    /**
+     * @brief Full constructor
+     * @param data raw record data
+     * @param conf_vector column configuration
+     */
+    Record(std::vector<uint8_t> data, std::vector<std::string> conf_vector) 
+        : data(data), conf_vector(conf_vector) {}
+
+    /**
+     * @brief Operator for records output 
+     */
     friend std::ostream& operator<<(std::ostream& os, const Record& record) {
         if (record.data.empty() || record.conf_vector.empty()) {
             os << "(empty record)";
@@ -72,3 +91,5 @@ struct Record {
         return os;
     }
 };
+
+}
