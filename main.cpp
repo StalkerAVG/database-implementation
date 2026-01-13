@@ -1,8 +1,20 @@
 #include <iostream>
+#include <string>
+#include <vector>
+#include <csignal>
 #include "parser/Lexer.hpp"
 #include "parser/Parser.hpp"
 #include "executor/Executor.hpp"
 #include "storage-engine/table_manager.hpp"
+
+volatile sig_atomic_t interrupted = 0;
+
+void signalHandler(int signal) {
+    if (signal == SIGINT) {
+        interrupted = 1;
+        std::cout << "\n^C\ncholopdb> " << std::flush;
+    }
+}
 
 void processSQL(amk::Executor& executor, const std::string& sql) {
     try {
@@ -16,56 +28,77 @@ void processSQL(amk::Executor& executor, const std::string& sql) {
     }
 }
 
-int main(){
-    std::cout << "Integration Test Suite" << std::endl;
+void showHelp() {
+    std::cout << "\nAvailable Commands:\n";
+    std::cout << "  help     - Show this help message\n";
+    std::cout << "  history  - Show command history\n";
+    std::cout << "  exit     - Exit the CLI\n";
+    std::cout << "  Ctrl+C   - Cancel current input\n";
+    std::cout << "\nSQL Commands: CREATE, DROP, USE, SELECT, INSERT, DELETE\n" << std::endl;
+    std::cout << "For more information, refer to the CholopDB documentation.\n" << std::endl;
+}
+
+void showHistory(const std::vector<std::string>& history) {
+    std::cout << "\nCommand History:\n";
+    for (size_t i = 0; i < history.size(); i++) {
+        std::cout << "  " << i + 1 << ". " << history[i] << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+int main() {
+    signal(SIGINT, signalHandler);
+    
+    std::cout << "==================================" << std::endl;
+    std::cout << "     CholopDB SQL Interface       " << std::endl;
+    std::cout << "==================================" << std::endl;
+    std::cout << "Type 'help' for commands or 'exit' to leave\n" << std::endl;
     
     amk::Executor executor;
-
-    std::string create_db = "CREATE DATABASE testdb3";
-    processSQL(executor, create_db);
+    std::vector<std::string> history;
+    std::string input;
     
-    std::string use_db = "USE testdb3";
-    processSQL(executor, use_db);
-
-    std::string create_table = "CREATE TABLE table1 (col1 ID, col2 BIGTEXT)";
-    processSQL(executor, create_table);
-
-    std::string drop_table = "DROP TABLE table3";
-    processSQL(executor, drop_table);
-
-    std::string insert_record = "INSERT INTO table1 VALUES (1, \"Who\"), (2, \"is\"), (3, \"Mario?\"), (4, \"Its me Mario\")";
-    processSQL(executor, insert_record);
-
-    std::string select = "SELECT * FROM table1  WHERE col1 = 4";
-    processSQL(executor, select);
-
-    std::string select2 = "SELECT * FROM table1  WHERE col1 = 3";
-    processSQL(executor, select2);
-
-    std::string select3 = "SELECT * FROM table1  WHERE col2 = \"Its me Mario\"";
-    processSQL(executor, select3);
-
-    std::string select4 = "SELECT * FROM table1  WHERE col1 > 2";
-    processSQL(executor, select4);
-
-    std::string select5 = "SELECT * FROM table1  WHERE col1 < 3";
-    processSQL(executor, select5);
-
-    std::string select6 = "SELECT * FROM table1";
-    processSQL(executor, select6);
-
-    std::string select7 = "SELECT col1, col2 FROM table1";
-    processSQL(executor, select7);
-
-    std::string delete_record = "DELETE FROM table1 WHERE col1 = 4";
-    processSQL(executor, delete_record);
-
-    processSQL(executor, select);
-    processSQL(executor, select2);
-
-
-    std::string drop_db = "DROP DATABASE testdb3";
-    processSQL(executor, drop_db);
+    while (true) {
+        std::cout << "cholopdb> " << std::flush;
+        
+        if (!std::getline(std::cin, input)) {
+            break;
+        }
+        
+        if (interrupted) {
+            interrupted = 0;
+            continue;
+        }
+        
+        size_t start = input.find_first_not_of(" \t\n\r");
+        size_t end = input.find_last_not_of(" \t\n\r");
+        
+        if (start == std::string::npos) {
+            continue;
+        }
+        
+        input = input.substr(start, end - start + 1);
+        
+        if (input == "exit" || input == "quit") {
+            std::cout << "Goodbye!" << std::endl;
+            break;
+        }
+        else if (input == "help") {
+            showHelp();
+            continue;
+        }
+        else if (input == "history") {
+            showHistory(history);
+            continue;
+        }
+        
+        if (!input.empty()) {
+            history.push_back(input);
+            processSQL(executor, input);
+        }
+        
+        std::cout << std::endl;
+    }
     
     return 0;
 }
